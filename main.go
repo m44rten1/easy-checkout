@@ -142,7 +142,7 @@ func main() {
 				prefix = "* "
 			}
 
-			return fmt.Sprintf("%s%s         %s", prefix, timestamp, branch.Name)
+			return fmt.Sprintf("%s%s    %s", prefix, timestamp, branch.Name)
 		})
 
 	if err != nil {
