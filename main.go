@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -8,6 +9,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"easy-checkout/version"
 
 	"github.com/ktr0731/go-fuzzyfinder"
 )
@@ -123,6 +126,14 @@ func getBranches() ([]Branch, error) {
 }
 
 func main() {
+	versionFlag := flag.Bool("version", false, "Print version information")
+	flag.Parse()
+
+	if *versionFlag {
+		fmt.Printf("%s\n", version.Version)
+		os.Exit(0)
+	}
+
 	branches, err := getBranches()
 	if err != nil {
 		log.Fatalf("Error: %v", err)
