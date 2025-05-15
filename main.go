@@ -116,11 +116,11 @@ func main() {
 		branches,
 		func(i int) string {
 			branch := branches[i]
-			lastUsed := ""
+			timestamp := "                    " // 20 spaces for alignment
 			if !branch.LastUsage.IsZero() {
-				lastUsed = fmt.Sprintf(" (%s)", branch.LastUsage.Format("2006-01-02 15:04:05"))
+				timestamp = branch.LastUsage.Format("02/01/06 15:04")
 			}
-			return branch.Name + lastUsed
+			return fmt.Sprintf("%s         %s", timestamp, branch.Name)
 		})
 
 	if err != nil {
