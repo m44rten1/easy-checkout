@@ -15,6 +15,7 @@ import (
 type Branch struct {
 	Name      string
 	LastUsage time.Time
+	IsCurrent bool
 }
 
 func getGitCommand(args ...string) (string, error) {
@@ -26,7 +27,21 @@ func getGitCommand(args ...string) (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
+func getCurrentBranch() (string, error) {
+	output, err := getGitCommand("branch", "--show-current")
+	if err != nil {
+		return "", fmt.Errorf("error getting current branch: %v", err)
+	}
+	return output, nil
+}
+
 func getBranches() ([]Branch, error) {
+	// Get current branch first
+	currentBranch, err := getCurrentBranch()
+	if err != nil {
+		return nil, err
+	}
+
 	// Get all branches
 	branchOutput, err := getGitCommand("branch")
 	if err != nil {
@@ -42,6 +57,7 @@ func getBranches() ([]Branch, error) {
 		branches[name] = Branch{
 			Name:      name,
 			LastUsage: time.Time{}, // Zero time as default
+			IsCurrent: name == currentBranch,
 		}
 	}
 
@@ -120,7 +136,13 @@ func main() {
 			if !branch.LastUsage.IsZero() {
 				timestamp = branch.LastUsage.Format("02/01/06 15:04")
 			}
-			return fmt.Sprintf("%s         %s", timestamp, branch.Name)
+
+			prefix := "  "
+			if branch.IsCurrent {
+				prefix = "* "
+			}
+
+			return fmt.Sprintf("%s%s         %s", prefix, timestamp, branch.Name)
 		})
 
 	if err != nil {
