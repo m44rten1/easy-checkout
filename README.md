@@ -11,6 +11,18 @@ A simple Go program that enhances your git branch checkout experience by providi
 
 ## Installation
 
+### Via Homebrew (Recommended)
+
+```bash
+# Add the tap
+brew tap m44rten1/easy-checkout
+
+# Install easy-checkout
+brew install easy-checkout
+```
+
+### Manual Installation
+
 1. Make sure you have Go installed on your system
 2. Clone this repository
 3. Run:
