@@ -45,35 +45,37 @@ func getBranches() ([]Branch, error) {
 		}
 	}
 
-	// Get reflog entries
-	reflogOutput, err := getGitCommand("reflog")
+	// Get reflog entries with ISO dates
+	reflogOutput, err := getGitCommand("reflog", "show", "--date=iso")
 	if err != nil {
 		return nil, fmt.Errorf("error getting reflog: %v", err)
 	}
 
 	reflogLines := strings.Split(reflogOutput, "\n")
 	for _, line := range reflogLines {
-		if strings.Contains(line, "checkout:") {
-			parts := strings.Split(line, "}")
-			if len(parts) < 2 {
-				continue
-			}
+		if !strings.Contains(line, "checkout: moving") {
+			continue
+		}
 
-			// Parse timestamp from the first part
-			timestampStr := strings.Split(parts[0], " ")[0]
-			timestamp, err := time.Parse("Mon_Jan_2_15:04:05_2006", strings.ReplaceAll(timestampStr, " ", "_"))
-			if err != nil {
-				continue
-			}
+		// Extract timestamp
+		parts := strings.SplitN(line, "HEAD@{", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		timestampPart := strings.Split(parts[1], "}")
+		if len(timestampPart) < 2 {
+			continue
+		}
 
-			// Extract branch name
-			moveInfo := strings.Split(parts[1], "to ")
-			if len(moveInfo) < 2 {
-				continue
-			}
-			branchName := strings.TrimSpace(moveInfo[1])
+		// Parse the ISO format timestamp
+		timestamp, err := time.Parse("2006-01-02 15:04:05 -0700", strings.TrimSpace(timestampPart[0]))
+		if err != nil {
+			continue
+		}
 
-			// Update branch last usage if it's more recent
+		// Extract branch name - it's the last part after "to "
+		if idx := strings.LastIndex(line, "to "); idx != -1 {
+			branchName := strings.TrimSpace(line[idx+3:])
 			if branch, exists := branches[branchName]; exists {
 				if branch.LastUsage.IsZero() || timestamp.After(branch.LastUsage) {
 					branch.LastUsage = timestamp
@@ -113,19 +115,13 @@ func main() {
 	idx, err := fuzzyfinder.Find(
 		branches,
 		func(i int) string {
-			return branches[i].Name
-		},
-		fuzzyfinder.WithPreviewWindow(func(i, w, h int) string {
-			if i == -1 {
-				return ""
-			}
 			branch := branches[i]
-			lastUsed := "Never checked out"
+			lastUsed := ""
 			if !branch.LastUsage.IsZero() {
-				lastUsed = branch.LastUsage.Format("2006-01-02 15:04:05")
+				lastUsed = fmt.Sprintf(" (%s)", branch.LastUsage.Format("2006-01-02 15:04:05"))
 			}
-			return fmt.Sprintf("Branch: %s\nLast checked out: %s", branch.Name, lastUsed)
-		}))
+			return branch.Name + lastUsed
+		})
 
 	if err != nil {
 		if err == fuzzyfinder.ErrAbort {
