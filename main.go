@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"sort"
@@ -22,6 +21,14 @@ type Branch struct {
 }
 
 func getGitCommand(args ...string) (string, error) {
+	// First check if we're in a git repository
+	if args[0] != "rev-parse" { // Skip this check for rev-parse itself
+		checkCmd := exec.Command("git", "rev-parse", "--git-dir")
+		if err := checkCmd.Run(); err != nil {
+			return "", fmt.Errorf("not in a git repository - please run this command from within a git repository")
+		}
+	}
+
 	cmd := exec.Command("git", args...)
 	output, err := cmd.Output()
 	if err != nil {
@@ -136,7 +143,8 @@ func main() {
 
 	branches, err := getBranches()
 	if err != nil {
-		log.Fatalf("Error: %v", err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
 	idx, err := fuzzyfinder.Find(
@@ -160,7 +168,8 @@ func main() {
 		if err == fuzzyfinder.ErrAbort {
 			os.Exit(0)
 		}
-		log.Fatal(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
 	selectedBranch := branches[idx].Name
@@ -168,6 +177,7 @@ func main() {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		log.Fatalf("Error checking out branch: %v", err)
+		fmt.Fprintf(os.Stderr, "Error checking out branch: %v\n", err)
+		os.Exit(1)
 	}
 }
