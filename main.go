@@ -52,22 +52,63 @@ func getBranches() ([]Branch, error) {
 		return nil, err
 	}
 
-	// Get all branches
+	// Get all local branches
 	branchOutput, err := getGitCommand("branch")
 	if err != nil {
 		return nil, fmt.Errorf("error getting branches: %v", err)
 	}
 
+	// Get all remote branches
+	remoteBranchOutput, err := getGitCommand("branch", "-r")
+	if err != nil {
+		return nil, fmt.Errorf("error getting remote branches: %v", err)
+	}
+
 	branchLines := strings.Split(branchOutput, "\n")
+	remoteBranchLines := strings.Split(remoteBranchOutput, "\n")
 	branches := make(map[string]Branch)
 
-	// Initialize branches with names
+	// Initialize local branches with names
 	for _, line := range branchLines {
 		name := strings.TrimSpace(strings.TrimPrefix(line, "*"))
+		if name == "" {
+			continue
+		}
 		branches[name] = Branch{
 			Name:      name,
 			LastUsage: time.Time{}, // Zero time as default
 			IsCurrent: name == currentBranch,
+		}
+	}
+
+	// Get list of local branch names for filtering remotes
+	localBranchNames := make(map[string]bool)
+	for name := range branches {
+		localBranchNames[name] = true
+	}
+
+	// Initialize remote branches with names
+	for _, line := range remoteBranchLines {
+		name := strings.TrimSpace(line)
+		if name == "" || strings.Contains(name, "HEAD ->") {
+			continue
+		}
+		// Extract branch name without remote prefix
+		parts := strings.SplitN(name, "/", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		branchName := parts[1]
+
+		// Skip if we already have this branch locally
+		if localBranchNames[branchName] {
+			continue
+		}
+
+		branches[name] = Branch{
+			Name:      name,
+			LastUsage: time.Time{}, // Zero time as default
+			IsCurrent: false,       // Remote branches can't be current
 		}
 	}
 
@@ -151,16 +192,21 @@ func main() {
 		branches,
 		func(i int) string {
 			branch := branches[i]
-			timestamp := "                    " // 20 spaces for alignment
-			if !branch.LastUsage.IsZero() {
-				timestamp = branch.LastUsage.Format("02/01/06 15:04")
-			}
-
 			prefix := "  "
 			if branch.IsCurrent {
 				prefix = "* "
 			}
 
+			// Handle remote branches differently
+			if strings.Contains(branch.Name, "/") {
+				return fmt.Sprintf("%s%s%s", prefix, strings.Repeat(" ", 18), branch.Name)
+			}
+
+			// Local branches with timestamp
+			timestamp := "                    " // 20 spaces for alignment
+			if !branch.LastUsage.IsZero() {
+				timestamp = branch.LastUsage.Format("02/01/06 15:04")
+			}
 			return fmt.Sprintf("%s%s    %s", prefix, timestamp, branch.Name)
 		})
 
@@ -173,6 +219,26 @@ func main() {
 	}
 
 	selectedBranch := branches[idx].Name
+
+	// Check if this is a remote branch
+	if strings.Contains(selectedBranch, "/") {
+		// Extract the branch name without remote prefix
+		parts := strings.SplitN(selectedBranch, "/", 2)
+		if len(parts) == 2 {
+			localBranch := parts[1]
+			// Create a new local branch tracking the remote branch
+			cmd := exec.Command("git", "checkout", "-b", localBranch, selectedBranch)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error creating tracking branch: %v\n", err)
+				os.Exit(1)
+			}
+			return
+		}
+	}
+
+	// For local branches, proceed as normal
 	cmd := exec.Command("git", "checkout", selectedBranch)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
