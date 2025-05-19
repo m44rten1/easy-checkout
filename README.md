@@ -55,5 +55,5 @@ alias check='easy-checkout'
 
 ## Requirements
 
-- Git
+- Git 2.22.0 or later
 - Go 1.21 or later
