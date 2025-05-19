@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -173,6 +174,41 @@ func getBranches() ([]Branch, error) {
 	return branchList, nil
 }
 
+func checkGitVersion() error {
+	output, err := exec.Command("git", "--version").Output()
+	if err != nil {
+		return fmt.Errorf("failed to get git version: %v", err)
+	}
+
+	// Parse version string like "git version 2.22.0"
+	versionStr := strings.TrimSpace(string(output))
+	parts := strings.Split(versionStr, " ")
+	if len(parts) != 3 {
+		return fmt.Errorf("unexpected git version format: %s", versionStr)
+	}
+
+	versionParts := strings.Split(parts[2], ".")
+	if len(versionParts) < 2 {
+		return fmt.Errorf("unexpected git version format: %s", parts[2])
+	}
+
+	major, err := strconv.Atoi(versionParts[0])
+	if err != nil {
+		return fmt.Errorf("failed to parse git major version: %v", err)
+	}
+
+	minor, err := strconv.Atoi(versionParts[1])
+	if err != nil {
+		return fmt.Errorf("failed to parse git minor version: %v", err)
+	}
+
+	if major < 2 || (major == 2 && minor < 22) {
+		return fmt.Errorf("git version %s is too old. Please upgrade to git 2.22.0 or later", parts[2])
+	}
+
+	return nil
+}
+
 func main() {
 	versionFlag := flag.Bool("version", false, "Print version information")
 	flag.Parse()
@@ -180,6 +216,11 @@ func main() {
 	if *versionFlag {
 		fmt.Printf("%s\n", version.Version)
 		os.Exit(0)
+	}
+
+	if err := checkGitVersion(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
 	branches, err := getBranches()
