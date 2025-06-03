@@ -10,12 +10,10 @@ jobs:
   update-homebrew:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout homebrew-easy-checkout
+      - name: Checkout easy-checkout (main repo)
         uses: actions/checkout@v4
         with:
-          repository: m44rten1/homebrew-easy-checkout
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          path: homebrew-tap
+          fetch-depth: 0  # fetch all history and tags
 
       - name: Get latest tag
         id: get_tag
@@ -27,6 +25,13 @@ jobs:
           wget https://github.com/m44rten1/easy-checkout/releases/download/${{ steps.get_tag.outputs.tag_name }}/easy-checkout-${{ steps.get_tag.outputs.tag_name }}-darwin-arm64
           sha256sum easy-checkout-${{ steps.get_tag.outputs.tag_name }}-darwin-amd64 > checksum_amd64.txt
           sha256sum easy-checkout-${{ steps.get_tag.outputs.tag_name }}-darwin-arm64 > checksum_arm64.txt
+
+      - name: Checkout homebrew-easy-checkout (tap repo)
+        uses: actions/checkout@v4
+        with:
+          repository: m44rten1/homebrew-easy-checkout
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
 
       - name: Update formula
         run: |
