@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v1.2.4
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
+      - name: Build darwin-amd64
+        run: |
+          GOOS=darwin GOARCH=amd64 go build -o easy-checkout-v${{ env.VERSION }}-darwin-amd64 main.go
+
+      - name: Build darwin-arm64
+        run: |
+          GOOS=darwin GOARCH=arm64 go build -o easy-checkout-v${{ env.VERSION }}-darwin-arm64 main.go
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            easy-checkout-v${{ env.VERSION }}-darwin-amd64
+            easy-checkout-v${{ env.VERSION }}-darwin-arm64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
