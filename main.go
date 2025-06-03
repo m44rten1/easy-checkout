@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -180,16 +181,18 @@ func checkGitVersion() error {
 		return fmt.Errorf("failed to get git version: %v", err)
 	}
 
-	// Parse version string like "git version 2.22.0"
+	// Use regex to extract version number (e.g., 2.39.5)
 	versionStr := strings.TrimSpace(string(output))
-	parts := strings.Split(versionStr, " ")
-	if len(parts) != 3 {
-		return fmt.Errorf("unexpected git version format: %s", versionStr)
+	versionRegex := "\\d+\\.\\d+(?:\\.\\d+)?"
+	re := regexp.MustCompile(versionRegex)
+	versionMatch := re.FindString(versionStr)
+	if versionMatch == "" {
+		return fmt.Errorf("could not parse git version from: %s", versionStr)
 	}
 
-	versionParts := strings.Split(parts[2], ".")
+	versionParts := strings.Split(versionMatch, ".")
 	if len(versionParts) < 2 {
-		return fmt.Errorf("unexpected git version format: %s", parts[2])
+		return fmt.Errorf("unexpected git version format: %s", versionMatch)
 	}
 
 	major, err := strconv.Atoi(versionParts[0])
@@ -203,7 +206,7 @@ func checkGitVersion() error {
 	}
 
 	if major < 2 || (major == 2 && minor < 22) {
-		return fmt.Errorf("git version %s is too old. Please upgrade to git 2.22.0 or later", parts[2])
+		return fmt.Errorf("git version %s is too old. Please upgrade to git 2.22.0 or later", versionMatch)
 	}
 
 	return nil
