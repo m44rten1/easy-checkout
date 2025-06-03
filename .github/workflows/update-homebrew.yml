@@ -37,21 +37,21 @@ jobs:
         run: |
           cd homebrew-tap
           # Update AMD64 url and sha256
-          sed -i "s|url \"https://github.com/m44rten1/easy-checkout/releases/download/v.*-darwin-amd64\"|url \"https://github.com/m44rten1/easy-checkout/releases/download/${{ steps.get_tag.outputs.tag_name }}/easy-checkout-${{ steps.get_tag.outputs.tag_name }}-darwin-amd64\"|" easy-checkout.rb
+          sed -i "s|url \"https://github.com/m44rten1/easy-checkout/releases/download/v.*-darwin-amd64\"|url \"https://github.com/m44rten1/easy-checkout/releases/download/${{ steps.get_tag.outputs.tag_name }}/easy-checkout-${{ steps.get_tag.outputs.tag_name }}-darwin-amd64\"|" Formula/easy-checkout.rb
           NEW_SHA_AMD64=$(cut -d' ' -f1 ../checksum_amd64.txt)
-          sed -i "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"$NEW_SHA_AMD64\"|" easy-checkout.rb
+          sed -i "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"$NEW_SHA_AMD64\"|" Formula/easy-checkout.rb
           # Update ARM url and sha256
-          sed -i "s|url \"https://github.com/m44rten1/easy-checkout/releases/download/v.*-darwin-arm64\"|url \"https://github.com/m44rten1/easy-checkout/releases/download/${{ steps.get_tag.outputs.tag_name }}/easy-checkout-${{ steps.get_tag.outputs.tag_name }}-darwin-arm64\"|" easy-checkout.rb
+          sed -i "s|url \"https://github.com/m44rten1/easy-checkout/releases/download/v.*-darwin-arm64\"|url \"https://github.com/m44rten1/easy-checkout/releases/download/${{ steps.get_tag.outputs.tag_name }}/easy-checkout-${{ steps.get_tag.outputs.tag_name }}-darwin-arm64\"|" Formula/easy-checkout.rb
           NEW_SHA_ARM64=$(cut -d' ' -f1 ../checksum_arm64.txt)
-          sed -i "0,/sha256 \"[a-f0-9]\{64\}\"/s//sha256 \"$NEW_SHA_ARM64\"/" easy-checkout.rb
+          sed -i "0,/sha256 \"[a-f0-9]\{64\}\"/s//sha256 \"$NEW_SHA_ARM64\"/" Formula/easy-checkout.rb
           # Update version
-          sed -i "s|version \".*\"|version \"${{ steps.get_tag.outputs.tag_name }}\"|" easy-checkout.rb
+          sed -i "s|version \".*\"|version \"${{ steps.get_tag.outputs.tag_name }}\"|" Formula/easy-checkout.rb
 
       - name: Commit and push
         run: |
           cd homebrew-tap
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add easy-checkout.rb
+          git add Formula/easy-checkout.rb
           git commit -m "Update to ${{ steps.get_tag.outputs.tag_name }}"
           git push
