@@ -264,36 +264,33 @@ func main() {
 
 	selectedBranch := branches[idx].Name
 
-	// Check if this is a remote branch
-	if strings.Contains(selectedBranch, "/") {
+	// Only treat as remote if it starts with 'origin/'
+	if strings.HasPrefix(selectedBranch, "origin/") {
 		// Extract the branch name without remote prefix
-		parts := strings.SplitN(selectedBranch, "/", 2)
-		if len(parts) == 2 {
-			localBranch := parts[1]
+		localBranch := selectedBranch[len("origin/"):]
 
-			// Check if the local branch already exists
-			if _, err := getGitCommand("rev-parse", "--verify", localBranch); err == nil {
-				// Branch exists, just check it out
-				cmd := exec.Command("git", "checkout", localBranch)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				if err := cmd.Run(); err != nil {
-					fmt.Fprintf(os.Stderr, "Error checking out existing branch: %v\n", err)
-					os.Exit(1)
-				}
-				return
-			}
-
-			// Branch doesn't exist, create a new local branch tracking the remote branch
-			cmd := exec.Command("git", "checkout", "-b", localBranch, selectedBranch)
+		// Check if the local branch already exists
+		if _, err := getGitCommand("rev-parse", "--verify", localBranch); err == nil {
+			// Branch exists, just check it out
+			cmd := exec.Command("git", "checkout", localBranch)
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			if err := cmd.Run(); err != nil {
-				fmt.Fprintf(os.Stderr, "Error creating tracking branch: %v\n", err)
+				fmt.Fprintf(os.Stderr, "Error checking out existing branch: %v\n", err)
 				os.Exit(1)
 			}
 			return
 		}
+
+		// Branch doesn't exist, create a new local branch tracking the remote branch
+		cmd := exec.Command("git", "checkout", "-b", localBranch, selectedBranch)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating tracking branch: %v\n", err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	// For local branches, proceed as normal
